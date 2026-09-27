@@ -18,7 +18,7 @@ alter table public.products
 insert into public.products (id, name, price, description, image_url, is_available, created_at)
 values
     (1, 'Chapati', 20, 'Fresh from the pan',
-     'https://images.unsplash.com/photo-1601050690597-df0568b70950?auto=format&fit=crop&w=900&q=85',
+     'https://upload.wikimedia.org/wikipedia/commons/5/5b/Chapati.jpg',
      true, now()),
     (2, 'Cakes', 80, 'A sweet morning treat',
      'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=900&q=85',
@@ -30,10 +30,10 @@ values
      'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=900&q=85',
      true, now()),
     (5, 'Eggs', 50, 'Sunny and satisfying',
-     'https://images.unsplash.com/photo-1498654896293-37aacf113fd9?auto=format&fit=crop&w=900&q=85',
+     'https://images.unsplash.com/photo-1565636290659-d5b15f864f64?auto=format&fit=crop&w=900&q=85',
      true, now()),
     (6, 'Mandazi', 10, 'Pillowy Kenyan classic',
-     'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=900&q=85',
+     'https://upload.wikimedia.org/wikipedia/commons/6/69/Bowl_of_mandazi.jpg',
      true, now())
 on conflict (id) do nothing;
 
@@ -61,6 +61,8 @@ create policy "public can read order items" on public.order_items
 --    Fixes the "column is_available does not exist" error
 --    by adding the is_available column (above) and using it correctly
 -- ============================================================
+drop function if exists public.place_order(text, text, text, jsonb);
+
 create or replace function public.place_order(
     p_customer_name  text,
     p_customer_email text,
