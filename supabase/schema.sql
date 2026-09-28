@@ -7,6 +7,9 @@
 --   - The menu displayed on the website.
 --   - Public SELECT via RLS policy (visitors browse the menu).
 --   - `is_available` controls whether an item can be ordered.
+--   - One row per product: `name` is unique once normalised, so a repeated
+--     seed cannot append duplicate rows and repeat a product's image on the
+--     menu. Applied by the 20260928173000 migration.
 -- ============================================================
 create table if not exists public.products (
     id            bigint      primary key,
@@ -43,8 +46,12 @@ create table if not exists public.order_items (
     product_id  bigint      references public.products(id),
     quantity    integer     not null default 1,
     unit_price  numeric(10,2),
-    created_at  timestamp   not null default now()
+    created_at    timestamp     not null default now()
 );
+
+-- One row per product. Normalised so "corns" and " Corns " cannot both exist.
+create unique index if not exists products_name_unique
+    on public.products (lower(btrim(name)));
 
 -- ============================================================
 -- Row Level Security
