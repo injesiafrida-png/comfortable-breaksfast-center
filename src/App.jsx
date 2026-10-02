@@ -208,9 +208,12 @@ export default function App() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [user, setUser] = useState(null)
   const [_session, setSession] = useState(null)
+  // True until getSession() has answered. The site must not flash either the
+  // sign-in screen or the menu during that window, or a signed-in visitor
+  // reloading the page would see the auth screen for a split second.
+  const [isSessionLoading, setIsSessionLoading] = useState(true)
   const [authMode, setAuthMode] = useState('login')
   const [showPassword, setShowPassword] = useState(false)
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [authForm, setAuthForm] = useState({ name: '', email: '', password: '', confirmPassword: '' })
   const [authError, setAuthError] = useState('')
   const [isAuthLoading, setIsAuthLoading] = useState(false)
@@ -234,15 +237,12 @@ export default function App() {
     if (orderTimer.current) clearTimeout(orderTimer.current)
   }, [])
 
+  // Focus the first field as soon as the sign-in screen is on, so a keyboard
+  // user can start typing without hunting for it.
   useEffect(() => {
-    if (!isAuthModalOpen) return
+    if (user || isSessionLoading) return
     firstAuthFieldRef.current?.focus()
-    const onKeyDown = event => {
-      if (event.key === 'Escape') setIsAuthModalOpen(false)
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [isAuthModalOpen])
+  }, [user, isSessionLoading, authMode])
 
   const loadProducts = useCallback(async () => {
     if (!supabase) {
@@ -294,7 +294,10 @@ export default function App() {
   }, [loadProducts])
 
   useEffect(() => {
-    if (!supabase) return
+    if (!supabase) {
+      setIsSessionLoading(false)
+      return
+    }
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
@@ -308,6 +311,7 @@ export default function App() {
       if (session?.user) {
         setProfile(prev => ({ ...prev, name: session.user.user_metadata?.name || '', email: session.user.email || '' }))
       }
+      setIsSessionLoading(false)
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -484,19 +488,6 @@ export default function App() {
     return ''
   }
 
-  const openAuthModal = () => {
-    if (!supabase) {
-      setAuthError('Account sign-in is temporarily unavailable. Please try again later.')
-      setAuthSuccess('')
-      setAuthMode('login')
-      setIsAuthModalOpen(true)
-      return
-    }
-    setAuthError('')
-    setAuthSuccess('')
-    setIsAuthModalOpen(true)
-  }
-
   const handleSignUp = async event => {
     event.preventDefault()
     setAuthError('')
@@ -523,15 +514,18 @@ export default function App() {
       return
     }
     setIsAuthLoading(true)
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: authForm.email,
       password: authForm.password,
       options: { data: { name: authForm.name } }
     })
     setIsAuthLoading(false)
     if (error) { setAuthError(error.message); return }
-    setAuthSuccess('Check your email to confirm your account. Then sign in.')
-    announce('Account created. Check your email to confirm it.')
+    // When the project does not require email confirmation, signUp hands back
+    // a session and onAuthStateChange opens the site straight away. When it
+    // does, there is no session yet and the confirmation message stands.
+    if (!data?.session) setAuthSuccess('Check your email to confirm your account. Then sign in.')
+    announce('Account created. Welcome to the Breakfast Center!')
     setAuthForm({ name: '', email: '', password: '', confirmPassword: '' })
   }
 
@@ -576,7 +570,10 @@ export default function App() {
       return
     }
     setProfile({ department: '', email: '', name: '' })
-    announce('You have been signed out.')
+    // The toast lives inside the site, which is about to be replaced by the
+    // sign-in screen, so the confirmation goes there instead.
+    setAuthError('')
+    setAuthSuccess('You have been signed out. Please sign in to order again.')
   }
 
   const toggleAuthMode = () => {
@@ -587,85 +584,32 @@ export default function App() {
     setAuthForm({ name: '', email: '', password: '', confirmPassword: '' })
   }
 
-  return <>
-    <div className={`toast ${notice ? 'toast--visible' : ''}`} role="status" aria-live="polite">
-      {notice && <><span className="toast-dot" aria-hidden="true"></span>{notice}</>}
-    </div>
-    <a className="skip-link" href="#menu">Skip to the menu</a>
-    <header className="topbar" role="banner">
-      <div className="topbar-inner">
-        <a className="brand" href="#top" aria-label="Comfortable Breakfast Center - Home">
-          <span className="brand-mark" aria-hidden="true">C</span>
-          <span className="brand-text">
-            <span className="brand-line">Comfortable</span>
-            <span className="brand-line brand-line--accent">Breakfast Center</span>
-          </span>
-        </a>
-
-        <nav className="primary-nav" aria-label="Main navigation">
-          <a href="#menu" data-nav="shop" className={activeSection === 'menu' ? 'active' : ''} aria-current={activeSection === 'menu' ? 'true' : undefined}>Shop</a>
-          <a href="#menu" data-nav="menu" className={activeSection === 'menu' ? 'active' : ''} aria-current={activeSection === 'menu' ? 'true' : undefined}>Our Menu</a>
-          <a href="#cart" data-nav="order" className={activeSection === 'cart' ? 'active' : ''} aria-current={activeSection === 'cart' ? 'true' : undefined}>Order</a>
-        </nav>
-
-        <div className="nav-actions">
-          <label className="nav-search" aria-label="Search menu">
-            <svg className="search-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            <input
-              type="search"
-              value={query}
-              onChange={event => setQuery(event.target.value)}
-              onKeyDown={event => {
-                if (event.key !== 'Enter') return
-                document.getElementById('menu-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              }}
-              placeholder="Search the menu…"
-              aria-label="Search menu"
-              autoComplete="off"
-            />
-            {query && (
-              <button type="button" className="search-clear" onClick={() => { setQuery(''); announce('Search cleared.') }} aria-label="Clear search">
-                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-              </button>
-            )}
-          </label>
-
-          {user ? (
-            <div className="user-menu">
-              <button className="user-avatar" onClick={handleSignOut} aria-label="Sign out of your account" title="Sign out">
-                <span className="avatar-initial">{ (user.user_metadata?.name || user.email || 'U').charAt(0).toUpperCase() }</span>
-              </button>
-            </div>
-          ) : (
-            <button className="icon-action sign-in-btn" onClick={openAuthModal} aria-label="Sign in" title="Sign in">
-              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/></svg>
-              <span className="sign-in-text">Log in</span>
-            </button>
-          )}
-
-          <a className="cart-action" href="#cart" aria-label={`View cart, ${cartCount} items`}>
-            <svg className="cart-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-            <span className="cart-label">Cart</span>
-            <span className="cart-count" aria-hidden="true">{cartCount}</span>
-          </a>
-        </div>
-      </div>
-      <div className="topbar-divider" aria-hidden="true"></div>
-    </header>
-    {!user && isAuthModalOpen && (
-      <div className="auth-modal-overlay" onClick={() => setIsAuthModalOpen(false)} style={{
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        background: 'rgba(23, 42, 58, 0.45)', zIndex: 1000,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+  // The sign-in screen is the app's front door: without a session there is no
+  // menu, no cart and no checkout to look at. isSessionLoading holds a neutral
+  // placeholder so a signed-in reload does not flash this screen on the way in.
+  if (isSessionLoading) {
+    return (
+      <div className="auth-gate" style={{
+        minHeight: '100vh', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', background: '#FFF7E8'
       }}>
-        <div className="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title" onClick={e => e.stopPropagation()} style={{
+        <p role="status" aria-live="polite" style={{display: 'flex', alignItems: 'center', gap: '10px', fontFamily: 'DM Sans', color: '#4F5F6A'}}>
+          <span className="spin" aria-hidden="true"></span>Checking your session…
+        </p>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="auth-gate" style={{
+        minHeight: '100vh', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', background: '#FFF7E8', padding: '20px'
+      }}>
+        <div className="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title" style={{
           background: '#FFF7E8', borderRadius: '12px',
           maxWidth: '420px', width: '100%', boxShadow: '0 20px 50px rgba(23,42,58,0.18)'
         }}>
-          <button className="auth-modal-close" onClick={() => setIsAuthModalOpen(false)} aria-label="Close sign in" style={{
-            position: 'absolute', top: '6px', right: '6px', background: 'none', border: 'none',
-            fontSize: '24px', cursor: 'pointer', color: '#4F5F6A', lineHeight: 1
-          }}>×</button>
           <div className="auth-header" style={{textAlign: 'center', marginBottom: '24px'}}>
             <p className="eyebrow" style={{margin: '0 0 8px'}}>{authMode === 'login' ? 'WELCOME BACK' : 'CREATE ACCOUNT'}</p>
             <h2 id="auth-title" style={{font: '600 clamp(28px,4vw,36px)/1.03 Fraunces', margin: 0, color: '#172A3A'}}>
@@ -760,7 +704,67 @@ export default function App() {
           </p>
         </div>
       </div>
-    )}
+    )
+  }
+
+  return <>
+    <div className={`toast ${notice ? 'toast--visible' : ''}`} role="status" aria-live="polite">
+      {notice && <><span className="toast-dot" aria-hidden="true"></span>{notice}</>}
+    </div>
+    <a className="skip-link" href="#menu">Skip to the menu</a>
+    <header className="topbar" role="banner">
+      <div className="topbar-inner">
+        <a className="brand" href="#top" aria-label="Comfortable Breakfast Center - Home">
+          <span className="brand-mark" aria-hidden="true">C</span>
+          <span className="brand-text">
+            <span className="brand-line">Comfortable</span>
+            <span className="brand-line brand-line--accent">Breakfast Center</span>
+          </span>
+        </a>
+
+        <nav className="primary-nav" aria-label="Main navigation">
+          <a href="#menu" data-nav="shop" className={activeSection === 'menu' ? 'active' : ''} aria-current={activeSection === 'menu' ? 'true' : undefined}>Shop</a>
+          <a href="#menu" data-nav="menu" className={activeSection === 'menu' ? 'active' : ''} aria-current={activeSection === 'menu' ? 'true' : undefined}>Our Menu</a>
+          <a href="#cart" data-nav="order" className={activeSection === 'cart' ? 'active' : ''} aria-current={activeSection === 'cart' ? 'true' : undefined}>Order</a>
+        </nav>
+
+        <div className="nav-actions">
+          <label className="nav-search" aria-label="Search menu">
+            <svg className="search-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input
+              type="search"
+              value={query}
+              onChange={event => setQuery(event.target.value)}
+              onKeyDown={event => {
+                if (event.key !== 'Enter') return
+                document.getElementById('menu-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }}
+              placeholder="Search the menu…"
+              aria-label="Search menu"
+              autoComplete="off"
+            />
+            {query && (
+              <button type="button" className="search-clear" onClick={() => { setQuery(''); announce('Search cleared.') }} aria-label="Clear search">
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            )}
+          </label>
+
+          <div className="user-menu">
+            <button className="user-avatar" onClick={handleSignOut} aria-label="Sign out of your account" title="Sign out">
+              <span className="avatar-initial">{ (user.user_metadata?.name || user.email || 'U').charAt(0).toUpperCase() }</span>
+            </button>
+          </div>
+
+          <a className="cart-action" href="#cart" aria-label={`View cart, ${cartCount} items`}>
+            <svg className="cart-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+            <span className="cart-label">Cart</span>
+            <span className="cart-count" aria-hidden="true">{cartCount}</span>
+          </a>
+        </div>
+      </div>
+      <div className="topbar-divider" aria-hidden="true"></div>
+    </header>
     <main id="top">
       <section className="hero">
         <div className="hero-copy">
