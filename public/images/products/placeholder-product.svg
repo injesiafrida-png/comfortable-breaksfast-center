@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" role="img" aria-labelledby="title desc">
+  <title id="title">Breakfast placeholder</title>
+  <desc id="desc">A warm breakfast-themed placeholder image for products without a photo.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f8efe0"/>
+      <stop offset="100%" stop-color="#e9d9ba"/>
+    </linearGradient>
+    <linearGradient id="plate" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#fffdf9"/>
+      <stop offset="100%" stop-color="#f0e7d4"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="600" fill="url(#bg)"/>
+  <circle cx="694" cy="128" r="56" fill="#f0c178" opacity="0.8"/>
+  <circle cx="742" cy="166" r="38" fill="#f2d29d" opacity="0.9"/>
+  <g transform="translate(78 90)">
+    <ellipse cx="350" cy="290" rx="230" ry="110" fill="url(#plate)"/>
+    <ellipse cx="350" cy="286" rx="182" ry="80" fill="#f7f2e9"/>
+    <path d="M193 264c36-44 76-66 157-66 83 0 121 26 158 64-42 43-91 64-158 64s-118-23-157-62Z" fill="#d8b476" opacity="0.8"/>
+    <path d="M204 270c28-25 61-37 93-40 34-3 70 6 98 28 35 26 64 42 94 42 15 0 29-2 41-7-17 42-60 68-114 68-58 0-104-18-148-53-15-12-30-25-64-38Z" fill="#c88d3d" opacity="0.7"/>
+    <path d="M278 188c22-18 48-30 75-30 28 0 54 12 75 30-23 15-52 22-75 22-25 0-51-7-75-22Z" fill="#c17d42"/>
+    <path d="M256 214c29-22 59-33 95-33 32 0 64 10 95 30-25 18-56 28-96 28-33 0-66-8-94-25Z" fill="#e4b96b"/>
+    <path d="M246 168c6 9 21 15 38 15 20 0 37-8 44-20-9-18-28-30-45-30-17 0-31 9-37 35Z" fill="#f8d8b0"/>
+    <path d="M405 170c14 18 32 27 58 27 25 0 44-9 52-26-10-18-29-31-56-31-20 0-40 11-54 30Z" fill="#f2ca86"/>
+    <path d="M230 314c28 15 61 23 95 23 33 0 67-8 96-24" stroke="#a36f32" stroke-width="10" stroke-linecap="round" fill="none" opacity="0.6"/>
+    <path d="M130 66c10 29 13 58 8 87" stroke="#d59d4d" stroke-width="10" stroke-linecap="round" fill="none" opacity="0.75"/>
+    <path d="M510 76c-10 25-13 54-8 84" stroke="#d59d4d" stroke-width="10" stroke-linecap="round" fill="none" opacity="0.75"/>
+  </g>
+  <text x="450" y="500" text-anchor="middle" font-family="DM Sans, Helvetica, Arial, sans-serif" font-size="54" font-weight="700" fill="#20322a" letter-spacing="4">BREAKFAST</text>
+</svg>
