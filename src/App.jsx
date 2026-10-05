@@ -138,7 +138,7 @@ const ProductCard = memo(({ product, index, selected, addedProductId, productQua
               <button type="button" aria-label={`Increase ${product.name} quantity`} disabled={unavailable || (productQuantities[product.id] || 1) >= MAX_QUANTITY} onClick={event => { event.stopPropagation(); const next = Number(productQuantities[product.id] || 1) + 1; if (next <= MAX_QUANTITY) setProductQuantities(current => ({ ...current, [product.id]: next })) }}>+</button>
             </div>
             <button className={`add-cart ${addedProductId === product.id ? 'added' : ''}`} disabled={unavailable || isMaxQty} onClick={event => { event.stopPropagation(); addToCart(product, Number(productQuantities[product.id] || 1)) }}>
-              {unavailable ? 'Out of stock' : isMaxQty ? 'Out of stock' : addedProductId === product.id ? 'Added' : 'Add to order'}
+              {unavailable ? 'Out of stock' : isMaxQty ? 'Out of stock' : addedProductId === product.id ? 'Added' : 'Add to Cart'}
             </button>
           </div>
         </div>

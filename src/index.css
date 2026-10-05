@@ -713,6 +713,28 @@ select:focus-visible {
 
 .hero-copy {
   max-width: 60ch;
+  will-change: transform;
+  animation: hero-copy-drift var(--hero-cycle) var(--hero-ease) infinite;
+}
+
+@keyframes hero-copy-drift {
+  0%,
+  6% {
+    transform: translate3d(0.12%, 0, 0);
+  }
+  34% {
+    transform: translate3d(0.35%, 0, 0);
+  }
+  50% {
+    transform: translate3d(-0.06%, 0, 0);
+  }
+  72% {
+    transform: translate3d(-0.25%, 0, 0);
+  }
+  88%,
+  100% {
+    transform: translate3d(0.12%, 0, 0);
+  }
 }
 
 .hero h1 {
@@ -793,7 +815,54 @@ select:focus-visible {
   transform: translateY(-50%);
 }
 
+/* One shot copy reveal. Every line eases in from the same 12px and settles to
+   exactly its laid out position, so nothing drifts afterwards and the text is
+   fully opaque by the time it arrives. Transform only, so the grid never reflows,
+   and one shared distance keeps the stagger reading as a single gesture. */
+.hero .eyebrow,
+.hero h1,
+.hero-text,
+.hero-actions,
+.hero-meta {
+  animation: hero-copy-in 680ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+.hero .eyebrow {
+  animation-delay: 60ms;
+}
+
+.hero h1 {
+  animation-delay: 120ms;
+}
+
+.hero-text {
+  animation-delay: 190ms;
+}
+
+.hero-actions {
+  animation-delay: 260ms;
+}
+
+.hero-meta {
+  animation-delay: 320ms;
+}
+
+@keyframes hero-copy-in {
+  from {
+    transform: translate3d(-12px, 0, 0);
+    opacity: 0;
+  }
+
+  to {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
 .hero-art {
+  --hero-cycle: 6s;
+  --hero-ease: cubic-bezier(0.45, 0.05, 0.55, 0.95);
+
   position: relative;
   margin: 0;
   padding: 0 0 44px 44px;
@@ -807,15 +876,52 @@ select:focus-visible {
   aspect-ratio: 4 / 4.6;
 }
 
+/* The two hero images are one system. Their frames never move: only the images
+   inside them are transformed, and each is clipped by its own frame, so no motion
+   can shift layout or bring the frames any closer together.
+
+   Both loops share --hero-cycle and --hero-ease and start with no delay, so they
+   stay phase locked and can never drift apart. The movements are counter phased:
+   the plate drifts left while the inset drifts right, so the two never read as the
+   same gesture. Each keyframe holds a constant oversize wider than its own travel
+   (plate 1.1 leaves 5% spare per side against 3%; inset 1.12 leaves 6% against 4%),
+   so a frame edge can never slide into view at any point in the cycle. */
 .hero-photo {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 620ms cubic-bezier(0.2, 0.6, 0.2, 1);
+  will-change: transform;
+  animation: hero-drift-plate var(--hero-cycle) var(--hero-ease) infinite;
+  transition: filter 620ms cubic-bezier(0.2, 0.6, 0.2, 1);
 }
 
+/* Hover now lifts tone rather than scale, since the loop owns the transform. */
 .hero-art:hover .hero-photo {
-  transform: scale(1.03);
+  filter: brightness(1.02) saturate(1.06);
+}
+
+@keyframes hero-drift-plate {
+  /* Rest. */
+  0%,
+  6% {
+    transform: translate3d(-1.2%, -0.4%, 0) scale(1.1);
+  }
+
+  /* Left, while the inset travels right. */
+  34% {
+    transform: translate3d(-3%, -0.7%, 0) scale(1.1);
+  }
+
+  /* Reverses back through centre into the push. */
+  50% {
+    transform: translate3d(-0.6%, 0.2%, 0) scale(1.16);
+  }
+
+  /* Long eased return while the inset takes its turn to push. */
+  88%,
+  100% {
+    transform: translate3d(-1.2%, -0.4%, 0) scale(1.1);
+  }
 }
 
 .hero-inset {
@@ -830,10 +936,42 @@ select:focus-visible {
   box-shadow: var(--shadow-lg);
 }
 
+/* The inset is far smaller than the plate, so it uses a wider percentage travel to
+   read at that size while staying under its own oversize. See the note above. */
 .hero-inset img {
   width: 100%;
   height: 132px;
   object-fit: cover;
+  will-change: transform;
+  animation: hero-drift-inset var(--hero-cycle) var(--hero-ease) infinite;
+}
+
+@keyframes hero-drift-inset {
+  /* Rest. */
+  0%,
+  6% {
+    transform: translate3d(1.5%, -0.4%, 0) scale(1.12);
+  }
+
+  /* Right, while the plate travels left. */
+  34% {
+    transform: translate3d(4%, 0.5%, 0) scale(1.12);
+  }
+
+  /* Holds this position for the plate's reversal and push. */
+  54% {
+    transform: translate3d(4%, 0.5%, 0) scale(1.12);
+  }
+
+  /* Its own push, running against the plate's return. */
+  72% {
+    transform: translate3d(2.4%, 0.2%, 0) scale(1.19);
+  }
+
+  88%,
+  100% {
+    transform: translate3d(1.5%, -0.4%, 0) scale(1.12);
+  }
 }
 
 .hero-mini-copy {
